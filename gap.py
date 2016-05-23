@@ -25,7 +25,7 @@ def init_db():
 def before_request():
     g.db = connect_db()
 
-@app.teardown_request
+#@app.teardown_request
 def teardown_request(exception):
     db = getattr(g, 'db', None)
     if db is not None:
@@ -37,13 +37,13 @@ def teardown_request(exception):
 def home():
     return 'Let\'s grow!'
 
-@app.route('/list/')
+@app.route('/list')
 def show_entries():
-    cur = g.db_execute('select title, text from entries order by id desc')
+    cur = g.db.execute('select title, text from entries order by id desc')
     entries = [dict(title = row[0], text = row[1]) for row in cur.fetchall()]
     return render_template('show_entries.html', entries = entries)
 
-@app.route('/add/', methods = ['POST'])
+@app.route('/add', methods = ['POST'])
 def add_entry():
     if not session.get('logged in'):
         abort(401)
@@ -53,7 +53,7 @@ def add_entry():
     flash('New entry was successfully posted')
     return redirect(url_for('show_entries'))
 
-@app.route('/login/')
+@app.route('/login')
 def login():
     error = None
     if request.method == 'POST':
@@ -67,7 +67,7 @@ def login():
             return redirect(url_for('show_entries'))
     return render_template('login.html', error = error)
 
-@app.route('/logout/')
+@app.route('/logout')
 def logout():
     session.pop('logged in', None)
     flash('You were logged out')
