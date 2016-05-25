@@ -1,0 +1,13 @@
+{% extends "layout.html" %}
+{% block body %}
+  {% if session.logged_in %}
+    <ul class=entries>
+      {% for test in tests %}
+        <li><h2>{{ test.title }}</h2><br />
+        {{ test.description|safe }}
+      {% else %}
+        <li><em>No tests here so far. Add one!</em>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}

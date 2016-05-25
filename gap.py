@@ -2,11 +2,15 @@
 import sqlite3
 from flask import Flask, request, session, g, redirect, url_for, abort, render_template, flash
 from contextlib import closing
-
+from flask_sqlalchemy import SQLAlchemy
 
 #	configuration
 app = Flask(__name__)
 app.config.from_object('app_config')
+
+#	SQLAlchemy init
+db = SQLAlchemy(app)
+
 
 
 #	db functions
@@ -35,43 +39,55 @@ def teardown_request(exception):
 #	url routings
 @app.route('/')
 def home():
-    return 'Let\'s grow!'
+    cur = g.db.execute('select title, description, vector, status, impact, confidence, ease from tests order by id desc')
+    tests = [dict(title = row[0], 
+                    description = row[1], 
+                    vector = row[2],
+                    status = row[3],
+                    impact = row[4],
+                    confidence = row[5],
+                    ease = row[6]) for row in cur.fetchall()]
+    return render_template('show_tests.html', tests = tests)
 
-@app.route('/list/')
-def show_entries():
-    cur = g.db.execute('select title, text from entries order by id desc')
-    entries = [dict(title = row[0], text = row[1]) for row in cur.fetchall()]
-    return render_template('show_entries.html', entries = entries)
+@app.route('/add')
+def add_form():
+    return render_template("add_test.html")
 
-@app.route('/add/', methods = ['POST'])
-def add_entry():
+@app.route('/add-test/', methods = ['POST'])
+def add_test():
     if not session.get('logged in'):
         abort(401)
-    g.db.execute('insert into entries (title, text) values (?, ?)',
-                 [request.form['title'], request.form['text']])
+    g.db.execute('insert into tests (title, description, vector, status, impact, confidence, ease) values (?, ?, ?, ?, ?, ?, ?)',
+                 [request.form['title'],
+                  request.form['description'], 
+                  request.form['vector'], 
+                  request.form['status'], 
+                  request.form['impact'], 
+                  request.form['confidence'], 
+                  request.form['ease']])
     g.db.commit()
-    flash('New entry was successfully posted')
+    flash('New test was successfully created!')
     return redirect(url_for('show_entries'))
 
-@app.route('/login/', methods = ['GET', 'POST'])
+@app.route('/login', methods = ['GET', 'POST'])
 def login():
     error = None
     if request.method == 'POST':
-        if request.form['username'] != app.config['USERNAME']:
+        if request.form['userName'] != app.config['USERNAME']:
             error = 'Invalid username'
-        if request.form['password'] != app.config['PASSWORD']:
+        if request.form['userPassword'] != app.config['PASSWORD']:
             error = 'Invalid password'
         else:
             session['logged_in'] = True
             flash('You were logged in')
-            return redirect(url_for('show_entries'))
+            return redirect(url_for('home'))
     return render_template('login.html', error = error)
 
-@app.route('/logout/')
+@app.route('/logout')
 def logout():
     session.pop('logged in', None)
     flash('You were logged out')
-    return redirect(url_for('show_entries'))
+    return redirect(url_for('home'))
 
 
 if __name__ == '__main__':
